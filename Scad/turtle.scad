@@ -1,7 +1,7 @@
 include<global.scad>
 
-use <hardware.scad>;
-use <electronic.scad>;
+use <hardware.scad>
+use <electronic.scad>
 
 module wheel()
 {
