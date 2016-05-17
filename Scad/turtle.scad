@@ -65,7 +65,7 @@ module motor_n20_support()
     }
 }
 
-module motor_block()
+module motor()
 {
     motor_n20();
     translate([0, 0, 0.6]) motor_n20_support();
@@ -106,18 +106,16 @@ module sensor_support()
     {
         union()
         {
-            cube([2, 1, 0.2]);
-            translate([1, 0.2, 0.5]) rotate([0, -90, 90]) cylinder(d = 2, h = 0.2, $fn = 3);
+            hull()
+            {
+                cube([2, 0.2, 0.2]);
+                translate([1, 0.2, 1.25]) rotate([0, -90, 90]) cylinder(d = 0.5, h = 0.2);
+            }
+            translate([0, 0.2, 0]) cube([2, 0.8, 0.2]);
         }
         translate([0.5, 0.5, -0.1]) cylinder(d = 0.3, h = 0.4);
         translate([1.5, 0.5, -0.1]) cylinder(d = 0.3, h = 0.4);
         translate([1, 0.3, 1]) rotate([90, 0, 0]) cylinder(d = 0.3, h = 0.4);
-    }
-
-    color("silver") translate([1, 0.2, 1]) rotate([270, 0, 0])
-    {
-        screw(d = 0.3, h = 0.7);
-        translate([0, 0, -0.4]) nut(d = 0.3, h = 0.2);
     }
 }
 
@@ -153,7 +151,18 @@ module sensor_PCB()
             screw(d = 0.3, h = 0.8);
             translate([0, 0, -0.5]) nut(d = 0.3, h = 0.2);
         }
+        translate([1, 0.2, 1]) rotate([270, 0, 0])
+        {
+            screw(d = 0.3, h = 0.7);
+            translate([0, 0, -0.4]) nut(d = 0.3, h = 0.2);
+        }
     }
+}
+
+module sensor()
+{
+    sensor_support();
+    sensor_PCB();
 }
 
 module main_PCB()
@@ -232,8 +241,8 @@ module step1()
 {
     plate();
     
-    translate([1.3, 0, -0.5 - explode_dist / 4]) rotate([90, 180, 90]) motor_block();
-    translate([-1.3, 0, -0.5 - explode_dist / 4]) rotate([90, 180, -90]) motor_block();
+    translate([1.3, 0, -0.5 - explode_dist / 4]) rotate([90, 180, 90]) motor();
+    translate([-1.3, 0, -0.5 - explode_dist / 4]) rotate([90, 180, -90]) motor();
 
     translate([0, 5.2, -0.4 - explode_dist / 4]) rotate([180, 0, 0]) roller();
     translate([0, -5.2, -0.4 - explode_dist / 4]) rotate([180, 0, 0]) roller();
@@ -273,9 +282,9 @@ module step3()
 {
     translate([0, 0, 2 + explode_dist / 2]) plate();
 
-    translate([-1, 6.3, 2.2 + explode_dist]) rotate([90, 0, 0]) { sensor_support(); sensor_PCB(); }
-    translate([-6.05, 3, 2.2 + explode_dist]) rotate([90, 0, 45]) { sensor_support(); sensor_PCB(); }
-    translate([4.65, 4.4, 2.2 + explode_dist]) rotate([90, 0, -45]) { sensor_support(); sensor_PCB(); }
+    translate([-1, 6.3, 2.2 + explode_dist]) rotate([90, 0, 0]) sensor();
+    translate([-6.05, 3, 2.2 + explode_dist]) rotate([90, 0, 45]) sensor();
+    translate([4.65, 4.4, 2.2 + explode_dist]) rotate([90, 0, -45]) sensor();
 }
 
 module step4()
