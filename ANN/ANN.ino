@@ -1,13 +1,8 @@
-#include "neurons.h"
+#include "global.h"
 
-SingleInputNeuron   frontSensor(A1);
-DualInputNeuron     sideSensor(A0, A2);
-HiddenNeuron        frontController(THRESHOLD_DISABLE, DECAY_QUADRATIC);
-HiddenNeuron        sideController(THRESHOLD_DISABLE, DECAY_QUADRATIC);
-HiddenNeuron        randomController(THRESHOLD_ZERO, 0.98);
-OutputNeuron        motor_R(4, 3, 2, THRESHOLD_DEFAULT);
-OutputNeuron        motor_L(5, 6, 7, THRESHOLD_DEFAULT);
-
+int w[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int x[7] = {0, 0, 0, 0, 0, 0, 0};
+  
 void callibrate()
 {
   YAPIDAutotuner autotuner(500, YAPID_PID);
@@ -74,6 +69,10 @@ void setup()
   Debug.begin(9600);
 #endif
 
+#ifdef ENABLE_JOYSTICK
+  joystick.init();  
+#endif
+
   frontSensor.init();
   sideSensor.init();
   frontController.init();
@@ -92,16 +91,90 @@ void setup()
   j += sideController.loadFromMemory(j);
 #endif
 
+#if defined(DEBUG_FRONT_SENSOR) // Front network
+  w[0] = 0;
+  w[1] = 1;
+  w[2] = 0;
+  w[3] = 0;
+  w[4] = 0;
+  w[5] = 1;
+  w[6] = 0;
+  w[7] = 0;
+  w[8] = 1;
+  w[9] = 0;
+  w[10] = 0;
+#elif defined(DEBUG_SIDE_SENSOR) // Side network
+  w[0] = 0;
+  w[1] = 0;
+  w[2] = 0;
+  w[3] = 1;
+  w[4] = 0;
+  w[5] = 0;
+  w[6] = 1;
+  w[7] = 0;
+  w[8] = 0;
+  w[9] = -1;
+  w[10] = 0;
+#elif defined(DEBUG_RANDOM_SENSOR) // Random network
+  w[0] = 0;
+  w[1] = 0;
+  w[2] = 0;
+  w[3] = 0;
+  w[4] = -1;
+  w[5] = 0;
+  w[6] = 0;
+  w[7] = -2;
+  w[8] = 0;
+  w[9] = 0;
+  w[10] = 2;
+#elif defined(CALLIBRATE) // Sum Front and side networks
+  w[0] = 0;
+  w[1] = 1;
+  w[2] = 0;
+  w[3] = 1;
+  w[4] = 0;
+  w[5] = 1;
+  w[6] = 1;
+  w[7] = 0;
+  w[8] = 1;
+  w[9] = -1;
+  w[10] = 0;
+#elif defined(ENABLE_JOYSTICK) // Sum all networks (Front + Side + Joystick)
+  w[0] = 0;
+  w[1] = 1;
+  w[2] = 0;
+  w[3] = 1;
+  w[4] = 0;
+  w[5] = 1;
+  w[6] = 1;
+  w[7] = 0;
+  w[8] = 1;
+  w[9] = -1;
+  w[10] = 0;
+#else // Sum all networks (Front + Side + Random)
+  w[0] = 0;
+  w[1] = 1;
+  w[2] = 0;
+  w[3] = 1;
+  w[4] = -1;
+  w[5] = 1;
+  w[6] = 1;
+  w[7] = -2;
+  w[8] = 1;
+  w[9] = -1;
+  w[10] = 2;
+#endif
+
   // Little dance when ready
   motor_R.fire(255);
   motor_L.fire(-255);
-  delay(500);
+  delay(250);
   motor_R.fire(-255);
   motor_L.fire(255);
-  delay(1000);
+  delay(500);
   motor_R.fire(255);
   motor_L.fire(-255);
-  delay(500);
+  delay(250);
   motor_R.fire(0);
   motor_L.fire(0);
   delay(10);
@@ -109,70 +182,45 @@ void setup()
 
 void loop()
 {
-#if defined(DEBUG_FRONT_SENSOR) // Front network
-  int w1 = 1;
-  int w2 = 0;
-  int w3 = 0;
-  int w4 = 1;
-  int w5 = 0;
-  int w6 = 0;
-  int w7 = 1;
-  int w8 = 0;
-  int w9 = 0;
-#elif defined(DEBUG_SIDE_SENSOR) // Side network
-  int w1 = 0;
-  int w2 = 1;
-  int w3 = 0;
-  int w4 = 0;
-  int w5 = 1;
-  int w6 = 0;
-  int w7 = 0;
-  int w8 = -1;
-  int w9 = 0;
-#elif defined(DEBUG_RANDOM_SENSOR) // Random network
-  int w1 = 0;
-  int w2 = 0;
-  int w3 = -1;
-  int w4 = 0;
-  int w5 = 0;
-  int w6 = -2;
-  int w7 = 0;
-  int w8 = 0;
-  int w9 = 2;
-#elif defined(CALLIBRATE) // Sum Front and side networks
-  int w1 = 1;
-  int w2 = 1;
-  int w3 = 0;
-  int w4 = 1;
-  int w5 = 1;
-  int w6 = 0;
-  int w7 = 1;
-  int w8 = -1;
-  int w9 = 0;
-#else // Sum all networks (Front + Side + Random)
-  int w1 = 1;
-  int w2 = 1;
-  int w3 = -1;
-  int w4 = 1;
-  int w5 = 1;
-  int w6 = -2;
-  int w7 = 1;
-  int w8 = -1;
-  int w9 = 2;
+#ifdef ENABLE_JOYSTICK
+  if(joystick.ready())
+  {
+    x[0] = joystick.Y;
+    x[1] = joystick.X;
+  }
+  if(joystick.ModeAuto)
+  {
+    w[0] = 0;
+    w[1] = 1;
+    w[2] = 0;
+    w[3] = 1;
+  }
+  else
+  {
+    w[0] = 1;
+    w[1] = 0;
+    w[2] = -1;
+    w[3] = 0;
+  }
 #endif
 
-  int x1 = frontSensor.fire();
-  int x2 = sideSensor.fire();
-  int x3 = frontController.fire(w1 * x1);
-  int x4 = sideController.fire(w2 * x2);
-  int x5 = randomController.fire(w3 * x3);
-  motor_R.fire(w4 * x3 + w5 * x4 + w6 * x5);
-  motor_L.fire(w7 * x3 + w8 * x4 + w9 * x5);
+  x[2] = frontSensor.fire();
+  x[3] = sideSensor.fire();
+  x[4]= frontController.fire(w[0] * x[0] + w[1] * x[2]);
+  x[5] = sideController.fire(w[2] * x[1] + w[3] * x[3]);
+  x[6] = randomController.fire(w[4] * x[4]);
+
+  motor_R.fire(w[5] * x[4] + w[6] * x[5] + w[7] * x[6]);
+  motor_L.fire(w[8] * x[4] + w[9] * x[5] + w[10] * x[6]);
 
 #ifdef DEBUG
-  Debug.println(w4 * x3 + w5 * x4 + w6 * x5);
+  Debug.print(x[2]);
+  Debug.print(',');
+  Debug.print(x[3]);
+  Debug.print(',');
+  Debug.println(w[5] * x[4] + w[6] * x[5] + w[7] * x[6]);
 #endif
 
-  delay(10);
+  delay(5);
 }
 

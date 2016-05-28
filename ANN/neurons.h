@@ -1,12 +1,3 @@
-#include <EEPROMEX.h>
-#include <YAPID.h>
-#include "config.h"
-
-#ifdef DEBUG
-#include <SoftwareSerial.h>
-SoftwareSerial Debug(0, 1);
-#endif
-
 #define THRESHOLD_ZERO      0
 #define THRESHOLD_DEFAULT   32
 #define THRESHOLD_DISABLE   -32768
@@ -36,7 +27,8 @@ class SingleInputNeuron
     int fire()
     {
       m_val = (m_val * 3 + analogRead(m_pin)) / 4;
-      return m_val - m_lim;
+      int a = m_val - m_lim;
+      return abs(a) < 100 ? 0 : a;
     }
 
   private:
@@ -74,7 +66,8 @@ class DualInputNeuron
     {
       m_valR = (m_valR * 3 + analogRead(m_pinR)) / 4;
       m_valL = (m_valL * 3 + analogRead(m_pinL)) / 4;
-      return m_valR - m_valL - m_delta;
+      int a = m_valR - m_valL - m_delta;
+      return abs(a) < 100 ? 0 : a;
     }
 
   private:
@@ -96,7 +89,7 @@ class HiddenNeuron
 
     void init()
     {
-      m_pidController.reset();
+      m_pidController.setConservativeTunings();
     }
 
     int fire(int value)
